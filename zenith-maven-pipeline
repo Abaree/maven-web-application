@@ -1,0 +1,27 @@
+node {
+    def mavenHome = tool name : 'maven 3.8.2'
+ 
+ stage ('clone') {git credentialsId: 'ebay-bts', url: 'https://github.com/Abaree/maven-web-application.git'}
+ 
+ stage ('MavenBuild')  { sh "${mavenHome}/bin/mvn clean package" } 
+ 
+ 
+ stage ('CodeQuality')  { sh "${mavenHome}/bin/mvn sonar:sonar" }
+ 
+ stage ('Upload') {sh "${mavenHome}/bin/mvn deploy" }
+
+ stage ('deploytoUAT') {deploy adapters: [tomcat9(credentialsId: 'zenith-maven-admin', path: '', url: 'http://54.234.30.139:8080/manager/html')], contextPath: null, war: 'target/*war'}
+
+ stage ('emailnotification') {emailext body: 'building a zenith-mavin-pipeline job', recipientProviders: [developers()], subject: 'zenith-mavin-pipeline build', to: 'developer'}
+
+stage ('ManualApproval') {
+    timeout(time:8, unit:'HOURS') {   
+        input message: 'please verify and approve'
+    }
+
+
+stage ('deploytoproduction') {{deploy adapters: [tomcat9(credentialsId: 'zenith-maven-admin', path: '', url: 'http://54.234.30.139:8080/manager/html')], contextPath: null, war: 'target/*war'}
+
+
+
+}
